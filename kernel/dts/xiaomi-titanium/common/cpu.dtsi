@@ -26,3 +26,7 @@
   		};
 	};
 };
+
+&pm8953_vadc {
+	/delete-node/ chan@13;
+};
