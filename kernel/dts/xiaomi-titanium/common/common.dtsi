@@ -1,5 +1,6 @@
 #include "android.dtsi"
 #include "soc.dtsi"
+#include "spi.dtsi"
 #include "sdhc.dtsi"
 #include "display.dtsi"
 #include "regulator.dtsi"
