@@ -1,5 +1,6 @@
 #include "android.dtsi"
 #include "soc.dtsi"
+#include "cpu.dtsi"
 #include "spi.dtsi"
 #include "sdhc.dtsi"
 #include "pinctrl.dtsi"
