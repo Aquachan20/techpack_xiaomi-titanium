@@ -8,3 +8,7 @@
 &wcnss_fw_mem {
 	reg = <0x0 0x8e800000 0x0 0x700000>;
 };
+
+&i2c_2 {
+	/delete-node/ adv7533@39;
+};
