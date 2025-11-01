@@ -7,4 +7,5 @@
 #include "audio.dtsi"
 #include "haptic.dtsi"
 #include "display.dtsi"
+#include "led.dtsi"
 #include "regulator.dtsi"
