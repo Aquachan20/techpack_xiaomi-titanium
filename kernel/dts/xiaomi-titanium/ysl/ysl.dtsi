@@ -5,4 +5,5 @@
 #include "pinctrl.dtsi"
 #include "ysl-pinctrl.dtsi"
 #include "battery.dtsi"
+#include "fingerprint.dtsi"
 #include "pmic.dtsi"
