@@ -2,6 +2,7 @@
 #include "display.dtsi"
 #include "touchscreen.dtsi"
 #include "camera.dtsi"
+#include "audio.dtsi"
 #include "misc.dtsi"
 #include "pinctrl.dtsi"
 #include "fingerprint.dtsi"

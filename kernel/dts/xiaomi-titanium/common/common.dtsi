@@ -3,6 +3,7 @@
 #include "spi.dtsi"
 #include "sdhc.dtsi"
 #include "pinctrl.dtsi"
+#include "audio.dtsi"
 #include "haptic.dtsi"
 #include "display.dtsi"
 #include "regulator.dtsi"
