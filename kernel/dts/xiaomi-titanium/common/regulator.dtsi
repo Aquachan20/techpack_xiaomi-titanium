@@ -9,11 +9,13 @@
 	rpm-regulator-ldoa6 {
 		pm8953_l6: regulator-l6 {
 			qcom,init-voltage = <1800000>;
+            regulator-always-on;
 		};
 	};
 
 	rpm-regulator-ldoa10 {
 		pm8953_l10: regulator-l10 {
+            regulator-always-on;
 		};
 	};
 
