@@ -2,6 +2,7 @@
 #include "display.dtsi"
 #include "touchscreen.dtsi"
 #include "misc.dtsi"
+#include "camera.dtsi"
 #include "pinctrl.dtsi"
 #include "ysl-pinctrl.dtsi"
 #include "battery.dtsi"
