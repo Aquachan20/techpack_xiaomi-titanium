@@ -3,3 +3,4 @@
 #include "touchscreen.dtsi"
 #include "pinctrl.dtsi"
 #include "battery.dtsi"
+#include "pmic.dtsi"
