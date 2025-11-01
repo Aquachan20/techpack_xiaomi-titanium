@@ -26,6 +26,10 @@
          1f 11 05 06 03 03 04 a0];
 };
 
+&mdss_dsi0 {
+	qcom,dsi-pref-prim-pan = <&dsi_sc_ili9881c_hd720_video>;
+};
+
 &dsi_truly_hd720_vid {
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 };
