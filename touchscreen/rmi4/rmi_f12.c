@@ -251,20 +251,6 @@ static int rmi_f12_attention(struct rmi_function *fn,
 			if (!active)
 				continue;
 
-			/* Terapkan orientasi dari DT */
-			if (sensor->swap_axes) {
-				int tmp = x;
-				x = y;
-				y = tmp;
-			}
-			if (sensor->invert_x)
-				x = sensor->max_x - x;
-			if (sensor->invert_y)
-				y = sensor->max_y - y;
-
-			/* Pastikan koordinat valid */
-			if (x < 0) x = 0;
-			if (y < 0) y = 0;
 			if (x > sensor->max_x) x = sensor->max_x;
 			if (y > sensor->max_y) y = sensor->max_y;
 
@@ -337,7 +323,7 @@ static int rmi_f12_probe(struct rmi_function *fn)
 	++query_addr;
 
 	/*
-	 * --- Fallback untuk Synaptics lama (tanpa register descriptors) ---
+	 * --- Fallback untuk Synaptics lama (tanpa firmware / register descriptors) ---
 	 * Contoh: BERK281300, TD4310, TD4322, TD4330
 	 */
 	if (!(buf & 0x1)) {
@@ -376,13 +362,6 @@ static int rmi_f12_probe(struct rmi_function *fn)
 		/* --- Default ukuran layar --- */
 		sensor->max_x = 1080;
 		sensor->max_y = 2160;
-
-		/* --- Opsi orientasi dari Device Tree --- */
-		if (fn->dev.of_node) {
-			sensor->swap_axes = of_property_read_bool(fn->dev.of_node, "syna,swap-xy");
-			sensor->invert_x  = of_property_read_bool(fn->dev.of_node, "syna,invert-x");
-			sensor->invert_y  = of_property_read_bool(fn->dev.of_node, "syna,invert-y");
-		}
 
 		ret = rmi_2d_sensor_configure_input(fn, sensor);
 		if (ret)
