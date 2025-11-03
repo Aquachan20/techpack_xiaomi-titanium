@@ -384,11 +384,25 @@ static int rmi_f12_probe(struct rmi_function *fn)
 
 		ret = rmi_2d_sensor_configure_input(fn, sensor);
 		if (ret)
-			return ret;
+    		return ret;
+
+		/* --- fixup  --- */
+		input_set_capability(sensor->input, EV_KEY, BTN_TOUCH);
+		input_set_capability(sensor->input, EV_KEY, BTN_TOOL_FINGER);
+		input_set_capability(sensor->input, EV_KEY, KEY_WAKEUP);
+
+		input_set_abs_params(sensor->input, ABS_MT_POSITION_X, 0, 1080, 0, 0);
+		input_set_abs_params(sensor->input, ABS_MT_POSITION_Y, 0, 2160, 0, 0);
+		input_set_abs_params(sensor->input, ABS_MT_PRESSURE, 0, 255, 0, 0);
+		input_set_abs_params(sensor->input, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);
+		input_set_abs_params(sensor->input, ABS_MT_TOUCH_MINOR, 0, 255, 0, 0);
+
+		input_mt_init_slots(sensor->input, sensor->nbr_fingers, INPUT_MT_DIRECT);
 
 		dev_info(&fn->dev,
-			"rmi4_f12: Legacy fallback 10-finger multi-touch aktif (tanpa register descriptors)\n");
+    		"rmi4_f12: Legacy fallback 10-finger multi-touch aktif (tanpa register descriptors)\n");
 		return 0;
+
 	}
 
 	f12 = devm_kzalloc(&fn->dev, sizeof(struct f12_data), GFP_KERNEL);
