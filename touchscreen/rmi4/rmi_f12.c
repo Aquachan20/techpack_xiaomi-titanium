@@ -322,6 +322,9 @@ static int rmi_f12_probe(struct rmi_function *fn)
 	}
 	++query_addr;
 
+	dev_info(&fn->dev, "F12: forcing legacy fallback mode\n");
+	buf = 0;  // paksa fallback aktif
+
 	/*
 	 * --- Fallback untuk Synaptics lama (tanpa firmware / register descriptors) ---
 	 * Contoh: BERK281300, TD4310, TD4322, TD4330
