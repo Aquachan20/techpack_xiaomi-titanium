@@ -8,6 +8,7 @@
 #include <linux/input.h>
 #include <linux/input/mt.h>
 #include <linux/rmi.h>
+#include <linux/of.h> 
 #include "rmi_driver.h"
 #include "rmi_2d_sensor.h"
 
@@ -204,6 +205,81 @@ static int rmi_f12_attention(struct rmi_function *fn,
 	struct f12_data *f12 = dev_get_drvdata(&fn->dev);
 	struct rmi_2d_sensor *sensor = &f12->sensor;
 
+	/*
+	 * --- Fallback multi-touch untuk panel tanpa descriptors ---
+	 * Format 8 byte per jari: [X_L, X_H, Y_L, Y_H, Z, WX, WY, FLAG]
+	 * FLAG bit0 = 1 berarti jari aktif
+	 */
+	if (!f12->data1) {
+		u8 buf[80];
+		int retval, i;
+		static int autodetected = 0;
+
+		retval = rmi_read_block(rmi_dev, fn->fd.data_base_addr, buf, sizeof(buf));
+		if (retval < 0) {
+			dev_err(&fn->dev, "Fallback MT: gagal baca data mentah (%d)\n", retval);
+			return retval;
+		}
+
+		/* Auto-detect ukuran layar (sekali di awal) */
+		if (!autodetected) {
+			int max_x = 0, max_y = 0;
+			for (i = 0; i < sensor->nbr_fingers; i++) {
+				int base = i * 8;
+				int x = (buf[base + 1] << 8) | buf[base + 0];
+				int y = (buf[base + 3] << 8) | buf[base + 2];
+				if (x > max_x) max_x = x;
+				if (y > max_y) max_y = y;
+			}
+			if (max_x > 0 && max_y > 0) {
+				sensor->max_x = max_x;
+				sensor->max_y = max_y;
+				dev_info(&fn->dev,
+					"rmi4_f12: Auto-detect layar max_x=%d max_y=%d\n",
+					max_x, max_y);
+			}
+			autodetected = 1;
+		}
+
+		for (i = 0; i < sensor->nbr_fingers; i++) {
+			int base = i * 8;
+			int x = (buf[base + 1] << 8) | buf[base + 0];
+			int y = (buf[base + 3] << 8) | buf[base + 2];
+			int z = buf[base + 4];
+			int active = buf[base + 7] & 0x01;
+
+			if (!active)
+				continue;
+
+			/* Terapkan orientasi dari DT */
+			if (sensor->swap_axes) {
+				int tmp = x;
+				x = y;
+				y = tmp;
+			}
+			if (sensor->invert_x)
+				x = sensor->max_x - x;
+			if (sensor->invert_y)
+				y = sensor->max_y - y;
+
+			/* Pastikan koordinat valid */
+			if (x < 0) x = 0;
+			if (y < 0) y = 0;
+			if (x > sensor->max_x) x = sensor->max_x;
+			if (y > sensor->max_y) y = sensor->max_y;
+
+			input_mt_slot(sensor->input, i);
+			input_mt_report_slot_state(sensor->input, MT_TOOL_FINGER, true);
+			input_report_abs(sensor->input, ABS_MT_POSITION_X, x);
+			input_report_abs(sensor->input, ABS_MT_POSITION_Y, y);
+			input_report_abs(sensor->input, ABS_MT_PRESSURE, z);
+		}
+
+		input_mt_sync_frame(sensor->input);
+		input_sync(sensor->input);
+		return 0;
+	}
+
 	if (rmi_dev->xport->attn_data) {
 		memcpy(sensor->data_pkt, rmi_dev->xport->attn_data,
 			sensor->attn_size);
@@ -260,10 +336,61 @@ static int rmi_f12_probe(struct rmi_function *fn)
 	}
 	++query_addr;
 
+	/*
+	 * --- Fallback untuk Synaptics lama (tanpa register descriptors) ---
+	 * Contoh: BERK281300, TD4310, TD4322, TD4330
+	 */
 	if (!(buf & 0x1)) {
-		dev_err(&fn->dev,
-			"Behavior of F12 without register descriptors is undefined.\n");
-		return -ENODEV;
+		dev_warn(&fn->dev,
+			"F12 tanpa register descriptors — mode fallback legacy multi-touch (10 jari) aktif.\n");
+
+		f12 = devm_kzalloc(&fn->dev, sizeof(struct f12_data), GFP_KERNEL);
+		if (!f12)
+			return -ENOMEM;
+
+		dev_set_drvdata(&fn->dev, f12);
+		sensor = &f12->sensor;
+		sensor->fn = fn;
+
+		/* --- Parameter umum touchscreen --- */
+		sensor->nbr_fingers = 10;       /* maksimum 10 jari */
+		sensor->report_abs = 1;
+		sensor->pkt_size = 80;          /* 8 byte * 10 jari */
+
+		sensor->data_pkt = devm_kzalloc(&fn->dev, sensor->pkt_size, GFP_KERNEL);
+		if (!sensor->data_pkt)
+			return -ENOMEM;
+
+		/* Alokasi tracking & objek sentuhan */
+		sensor->tracking_pos = devm_kzalloc(&fn->dev,
+				sizeof(struct input_mt_pos) * sensor->nbr_fingers,
+				GFP_KERNEL);
+		sensor->tracking_slots = devm_kzalloc(&fn->dev,
+				sizeof(int) * sensor->nbr_fingers, GFP_KERNEL);
+		sensor->objs = devm_kzalloc(&fn->dev,
+				sizeof(struct rmi_2d_sensor_abs_object) * sensor->nbr_fingers,
+				GFP_KERNEL);
+		if (!sensor->tracking_pos || !sensor->tracking_slots || !sensor->objs)
+			return -ENOMEM;
+
+		/* --- Default ukuran layar --- */
+		sensor->max_x = 1080;
+		sensor->max_y = 2160;
+
+		/* --- Opsi orientasi dari Device Tree --- */
+		if (fn->dev.of_node) {
+			sensor->swap_axes = of_property_read_bool(fn->dev.of_node, "syna,swap-xy");
+			sensor->invert_x  = of_property_read_bool(fn->dev.of_node, "syna,invert-x");
+			sensor->invert_y  = of_property_read_bool(fn->dev.of_node, "syna,invert-y");
+		}
+
+		ret = rmi_2d_sensor_configure_input(fn, sensor);
+		if (ret)
+			return ret;
+
+		dev_info(&fn->dev,
+			"rmi4_f12: Legacy fallback 10-finger multi-touch aktif (tanpa register descriptors)\n");
+		return 0;
 	}
 
 	f12 = devm_kzalloc(&fn->dev, sizeof(struct f12_data), GFP_KERNEL);

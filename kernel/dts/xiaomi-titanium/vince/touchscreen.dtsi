@@ -19,6 +19,10 @@
     		pinctrl-0 = <&ts_init_pins>;
     		pinctrl-1 = <&ts_suspend_pins>;
 
+			syna,swap-xy;      /* opsional */
+			// syna,invert-x;  /* opsional */
+			// syna,invert-y;  /* opsional */
+
 			syna,reset-delay-ms = <200>;
 			syna,startup-delay-ms = <500>;
 
@@ -31,8 +35,6 @@
 				reg = <0x12>;
 				syna,rezero-wait-ms = <20>;
 				syna,sensor-type = <1>;
-				touchscreen-size-x = <1080>;
-				touchscreen-size-y = <2160>;
 				touchscreen-x-mm = <68>;
 				touchscreen-y-mm = <122>;
 			};
