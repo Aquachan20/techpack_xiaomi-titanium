@@ -7,7 +7,7 @@
 			reg = <0x20>;
 			compatible = "syna,rmi4-i2c";
 			interrupt-parent = <&tlmm>;
-			interrupts = <0x65 0x2008>;
+			interrupts = <65 0x04>;
 
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -16,11 +16,11 @@
 			vio-supply = <&pm8953_l6>;
 
 			pinctrl-names = "init", "suspend";
-			pinctrl-0 = <&ts_reset_active &ts_int_active>;
-			pinctrl-1 = <&ts_reset_suspend &ts_int_suspend>;
+    		pinctrl-0 = <&ts_init_pins>;
+    		pinctrl-1 = <&ts_suspend_pins>;
+			reset-gpios = <&tlmm 64 GPIO_ACTIVE_LOW>;
 			syna,reset-delay-ms = <200>;
 			syna,startup-delay-ms = <500>;
-			reset-gpios = <&tlmm 64 0x2008>;
 
 			rmi4-f01@1 {
 				reg = <0x01>;
