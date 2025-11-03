@@ -132,6 +132,7 @@
                 config {
                     pins = "gpio65";
                     drive-strength = <8>;
+                    input;
                     bias-pull-up;
                     output-low;/* default low for safety */
                 };
@@ -161,6 +162,7 @@
                 config {
                     pins = "gpio65";
                     drive-strength = <2>;
+                    input;
                     bias-pull-down;
                     output-low; /* Keep low during suspend */
                 };
