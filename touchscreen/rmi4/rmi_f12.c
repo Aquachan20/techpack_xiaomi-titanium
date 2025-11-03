@@ -198,96 +198,99 @@ static void rmi_f12_process_objects(struct f12_data *f12, u8 *data1)
 }
 
 static int rmi_f12_attention(struct rmi_function *fn,
-			     unsigned long *irq_nr_regs)
+                             unsigned long *irq_nr_regs)
 {
-	int retval;
-	struct rmi_device *rmi_dev = fn->rmi_dev;
-	struct f12_data *f12 = dev_get_drvdata(&fn->dev);
-	struct rmi_2d_sensor *sensor = &f12->sensor;
+    int retval;
+    struct rmi_device *rmi_dev = fn->rmi_dev;
+    struct f12_data *f12 = dev_get_drvdata(&fn->dev);
+    struct rmi_2d_sensor *sensor = &f12->sensor;
 
-	/*
-	 * --- Fallback multi-touch untuk panel tanpa descriptors ---
-	 * Format 8 byte per jari: [X_L, X_H, Y_L, Y_H, Z, WX, WY, FLAG]
-	 * FLAG bit0 = 1 berarti jari aktif
-	 */
-	if (!f12->data1) {
-		u8 buf[80];
-		int retval, i;
-		static int autodetected = 0;
+    /*
+     * --- Fallback multi-touch untuk panel tanpa descriptors ---
+     * Format 8 byte per jari: [X_L, X_H, Y_L, Y_H, Z, WX, WY, FLAG]
+     * FLAG bit0 = 1 berarti jari aktif
+     */
+    if (!f12->data1) {
+        u8 buf[80];
+        int i;
+        static int autodetected = 0;
 
-		retval = rmi_read_block(rmi_dev, fn->fd.data_base_addr, buf, sizeof(buf));
-		if (retval < 0) {
-			dev_err(&fn->dev, "Fallback MT: gagal baca data mentah (%d)\n", retval);
-			return retval;
-		}
+        retval = rmi_read_block(rmi_dev, fn->fd.data_base_addr, buf, sizeof(buf));
+        if (retval < 0) {
+            dev_err(&fn->dev, "Fallback MT: gagal baca data mentah (%d)\n", retval);
+            return retval;
+        }
 
-		/* Auto-detect ukuran layar (sekali di awal) */
-		if (!autodetected) {
-			int max_x = 0, max_y = 0;
-			for (i = 0; i < sensor->nbr_fingers; i++) {
-				int base = i * 8;
-				int x = (buf[base + 1] << 8) | buf[base + 0];
-				int y = (buf[base + 3] << 8) | buf[base + 2];
-				if (x > max_x) max_x = x;
-				if (y > max_y) max_y = y;
-			}
-			if (max_x > 0 && max_y > 0) {
-				sensor->max_x = max_x;
-				sensor->max_y = max_y;
-				dev_info(&fn->dev,
-					"rmi4_f12: Auto-detect layar max_x=%d max_y=%d\n",
-					max_x, max_y);
-			}
-			autodetected = 1;
-		}
+        /* Tambahkan debug: tampilkan raw touch data */
+        dev_info(&fn->dev, "Raw touch data: %*ph\n", (int)sizeof(buf), buf);
 
-		for (i = 0; i < sensor->nbr_fingers; i++) {
-			int base = i * 8;
-			int x = (buf[base + 1] << 8) | buf[base + 0];
-			int y = (buf[base + 3] << 8) | buf[base + 2];
-			int z = buf[base + 4];
-			int active = buf[base + 7] & 0x01;
+        /* Auto-detect ukuran layar (sekali di awal) */
+        if (!autodetected) {
+            int max_x = 0, max_y = 0;
+            for (i = 0; i < sensor->nbr_fingers; i++) {
+                int base = i * 8;
+                int x = (buf[base + 1] << 8) | buf[base + 0];
+                int y = (buf[base + 3] << 8) | buf[base + 2];
+                if (x > max_x) max_x = x;
+                if (y > max_y) max_y = y;
+            }
+            if (max_x > 0 && max_y > 0) {
+                sensor->max_x = max_x;
+                sensor->max_y = max_y;
+                dev_info(&fn->dev,
+                    "rmi4_f12: Auto-detect layar max_x=%d max_y=%d\n",
+                    max_x, max_y);
+            }
+            autodetected = 1;
+        }
 
-			if (!active)
-				continue;
+        for (i = 0; i < sensor->nbr_fingers; i++) {
+            int base = i * 8;
+            int x = (buf[base + 1] << 8) | buf[base + 0];
+            int y = (buf[base + 3] << 8) | buf[base + 2];
+            int z = buf[base + 4];
+            int active = buf[base + 7] & 0x01;
 
-			if (x > sensor->max_x) x = sensor->max_x;
-			if (y > sensor->max_y) y = sensor->max_y;
+            if (!active)
+                continue;
 
-			input_mt_slot(sensor->input, i);
-			input_mt_report_slot_state(sensor->input, MT_TOOL_FINGER, true);
-			input_report_abs(sensor->input, ABS_MT_POSITION_X, x);
-			input_report_abs(sensor->input, ABS_MT_POSITION_Y, y);
-			input_report_abs(sensor->input, ABS_MT_PRESSURE, z);
-		}
+            if (x > sensor->max_x) x = sensor->max_x;
+            if (y > sensor->max_y) y = sensor->max_y;
 
-		input_mt_sync_frame(sensor->input);
-		input_sync(sensor->input);
-		return 0;
-	}
+            input_mt_slot(sensor->input, i);
+            input_mt_report_slot_state(sensor->input, MT_TOOL_FINGER, true);
+            input_report_abs(sensor->input, ABS_MT_POSITION_X, x);
+            input_report_abs(sensor->input, ABS_MT_POSITION_Y, y);
+            input_report_abs(sensor->input, ABS_MT_PRESSURE, z);
+        }
 
-	if (rmi_dev->xport->attn_data) {
-		memcpy(sensor->data_pkt, rmi_dev->xport->attn_data,
-			sensor->attn_size);
-		rmi_dev->xport->attn_data += sensor->attn_size;
-		rmi_dev->xport->attn_size -= sensor->attn_size;
-	} else {
-		retval = rmi_read_block(rmi_dev, f12->data_addr,
-					sensor->data_pkt, sensor->pkt_size);
-		if (retval < 0) {
-			dev_err(&fn->dev, "Failed to read object data. Code: %d.\n",
-				retval);
-			return retval;
-		}
-	}
+        input_mt_sync_frame(sensor->input);
+        input_sync(sensor->input);
+        return 0;
+    }
 
-	if (f12->data1)
-		rmi_f12_process_objects(f12,
-			&sensor->data_pkt[f12->data1_offset]);
+    if (rmi_dev->xport->attn_data) {
+        memcpy(sensor->data_pkt, rmi_dev->xport->attn_data,
+               sensor->attn_size);
+        rmi_dev->xport->attn_data += sensor->attn_size;
+        rmi_dev->xport->attn_size -= sensor->attn_size;
+    } else {
+        retval = rmi_read_block(rmi_dev, f12->data_addr,
+                                sensor->data_pkt, sensor->pkt_size);
+        if (retval < 0) {
+            dev_err(&fn->dev, "Failed to read object data. Code: %d.\n",
+                    retval);
+            return retval;
+        }
+    }
 
-	input_mt_sync_frame(sensor->input);
+    if (f12->data1)
+        rmi_f12_process_objects(f12,
+            &sensor->data_pkt[f12->data1_offset]);
 
-	return 0;
+    input_mt_sync_frame(sensor->input);
+
+    return 0;
 }
 
 static int rmi_f12_config(struct rmi_function *fn)
