@@ -122,10 +122,9 @@
 
 &soc {
     tlmm: pinctrl@1000000 {
-
-        /* --- Touchscreen Pins for Init --- */
+		/* --- Touchscreen Pins for Init --- */
         ts_init_pins: ts_init_pins {
-            ts_int_init: ts_int_init {
+            ts_int_init_label: ts_int_init {
                 mux {
                     pins = "gpio65";
                     function = "gpio";
@@ -134,11 +133,11 @@
                     pins = "gpio65";
                     drive-strength = <8>;
                     bias-pull-up;
-                    output-low; /* default low for safety */
+                    output-low;/* default low for safety */
                 };
             };
 
-            ts_reset_init: ts_reset_init {
+            ts_reset_init_label: ts_reset_init {
                 mux {
                     pins = "gpio64";
                     function = "gpio";
@@ -152,9 +151,9 @@
             };
         };
 
-        /* --- Touchscreen Pins for Suspend --- */
+		/* --- Touchscreen Pins for Suspend --- */
         ts_suspend_pins: ts_suspend_pins {
-            ts_int_suspend: ts_int_suspend {
+            ts_int_suspend_label: ts_int_suspend {
                 mux {
                     pins = "gpio65";
                     function = "gpio";
@@ -167,7 +166,7 @@
                 };
             };
 
-            ts_reset_suspend: ts_reset_suspend {
+            ts_reset_suspend_label: ts_reset_suspend {
                 mux {
                     pins = "gpio64";
                     function = "gpio";
