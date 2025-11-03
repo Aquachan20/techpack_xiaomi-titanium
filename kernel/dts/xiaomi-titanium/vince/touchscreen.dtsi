@@ -7,7 +7,7 @@
 			reg = <0x20>;
 			compatible = "syna,rmi4-i2c";
 			interrupt-parent = <&tlmm>;
-			interrupts = <65 0x04>;
+			interrupts = <65 IRQ_TYPE_EDGE_FALLING>;
 
 			#address-cells = <1>;
 			#size-cells = <0>;
