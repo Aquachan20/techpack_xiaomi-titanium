@@ -18,8 +18,7 @@
 			pinctrl-names = "init", "suspend";
     		pinctrl-0 = <&ts_init_pins>;
     		pinctrl-1 = <&ts_suspend_pins>;
-			
-			reset-gpios = <&tlmm 64 GPIO_ACTIVE_LOW>;
+
 			syna,reset-delay-ms = <200>;
 			syna,startup-delay-ms = <500>;
 
