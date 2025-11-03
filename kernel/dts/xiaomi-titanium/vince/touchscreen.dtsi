@@ -15,9 +15,9 @@
 			vdd-supply = <&pm8953_l10>;
 			vio-supply = <&pm8953_l6>;
 
-			pinctrl-names = "init", "suspend";
-    		pinctrl-0 = <&ts_init_pins>;
-    		pinctrl-1 = <&ts_suspend_pins>;
+			pinctrl-names = "default", "sleep";
+			pinctrl-0 = <&ts_reset_active &ts_int_active>;
+			pinctrl-1 = <&ts_reset_suspend &ts_int_suspend>;
 
 			syna,swap-xy;      /* opsional */
 			// syna,invert-x;  /* opsional */

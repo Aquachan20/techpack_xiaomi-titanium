@@ -122,60 +122,60 @@
 
 &soc {
     tlmm: pinctrl@1000000 {
-		/* --- Touchscreen Pins for Init --- */
-        ts_init_pins: ts_init_pins {
-            ts_int_init_label: ts_int_init {
+        /* --- Touchscreen Pins Default/Active --- */
+        ts_default: ts_default {
+            ts_int_active: ts_int_active {
                 mux {
                     pins = "gpio65";
                     function = "gpio";
                 };
                 config {
                     pins = "gpio65";
+                    input;               /* Set sebagai input untuk IRQ */
                     drive-strength = <8>;
-                    bias-pull-up;
-                    output-low;/* default low for safety */
+                    bias-pull-up;         /* Bias untuk level idle */
                 };
             };
 
-            ts_reset_init_label: ts_reset_init {
+            ts_reset_active: ts_reset_active {
                 mux {
                     pins = "gpio64";
                     function = "gpio";
                 };
                 config {
                     pins = "gpio64";
+                    output-high;         /* reset high by default */
                     drive-strength = <8>;
                     bias-pull-up;
-                    output-low;
                 };
             };
         };
 
-		/* --- Touchscreen Pins for Suspend --- */
-        ts_suspend_pins: ts_suspend_pins {
-            ts_int_suspend_label: ts_int_suspend {
+        /* --- Touchscreen Pins Sleep/Suspend --- */
+        ts_sleep: ts_sleep {
+            ts_int_suspend: ts_int_suspend {
                 mux {
                     pins = "gpio65";
                     function = "gpio";
                 };
                 config {
                     pins = "gpio65";
+                    input;
                     drive-strength = <2>;
                     bias-pull-down;
-                    output-low; /* Keep low during suspend */
                 };
             };
 
-            ts_reset_suspend_label: ts_reset_suspend {
+            ts_reset_suspend: ts_reset_suspend {
                 mux {
                     pins = "gpio64";
                     function = "gpio";
                 };
                 config {
                     pins = "gpio64";
+                    output-low;
                     drive-strength = <2>;
                     bias-pull-down;
-                    output-low;
                 };
             };
         };
