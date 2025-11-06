@@ -49,4 +49,4 @@
     qcom,msm-ext-pa = "primary";
 	qcom,msm-mclk-freq = <9600000>;
 	/delete-property/qcom,cdc-us-euro-gpios;
-}
+};
