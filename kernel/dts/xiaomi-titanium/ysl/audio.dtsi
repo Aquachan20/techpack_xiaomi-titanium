@@ -1,6 +1,7 @@
 /* msm-audio */
 &soc {
 	int_codec: sound {
+	compatible = "xiaomi,ysl", "qcom,msm8952-snd-card";
 	status = "ok";
 	qcom,msm-hs-micbias-type = "external";
 	qcom,msm-mbhc-hphl-swh = <1>;
