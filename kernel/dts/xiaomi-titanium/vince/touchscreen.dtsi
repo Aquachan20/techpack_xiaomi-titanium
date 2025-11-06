@@ -3,37 +3,27 @@
 		status = "okay";
 
 		/delete-node/ synaptics@4b;
-		touchscreen@20 {
+		synaptics_dsx@20 {
+			compatible = "synaptics,dsx-i2c";
 			reg = <0x20>;
-			compatible = "syna,rmi4-i2c";
 			interrupt-parent = <&tlmm>;
-			interrupts = <65 IRQ_TYPE_EDGE_FALLING>;
-
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			vdd-supply = <&pm8953_l10>;
-			vio-supply = <&pm8953_l6>;
-
+			interrupts = <0x65 0x2008>;
+			vdd-supply = <&pm8953_l6>;
+			avdd-supply = <&pm8953_l10>;
+			synaptics,pwr-reg-name = "avdd";
+			synaptics,bus-reg-name = "vdd";
 			pinctrl-names = "init", "suspend";
     		pinctrl-0 = <&ts_init_pins>;
     		pinctrl-1 = <&ts_suspend_pins>;
-
-			syna,reset-delay-ms = <200>;
-			syna,startup-delay-ms = <500>;
-
-			rmi4-f01@1 {
-				reg = <0x01>;
-				syna,nosleep-mode = <1>;
-			};
-
-			rmi4-f12@12 {
-				reg = <0x12>;
-				syna,rezero-wait-ms = <20>;
-				syna,sensor-type = <1>;
-				touchscreen-x-mm = <68>;
-				touchscreen-y-mm = <122>;
-			};
+			synaptics,cap-button-codes = <139 172 158>;
+			synaptics,irq-gpio = <&tlmm 65 0x2008>;
+			synaptics,reset-gpio = <&tlmm 64 0x2008>;
+			synaptics,irq-on-state = <0>;
+			synaptics,power-delay-ms = <200>;
+			synaptics,reset-active-ms = <20>;
+			synaptics,reset-delay-ms = <200>;
+			synaptics,reset-on-state = <0>;
+			synaptics,ub-i2c-addr = <0x2c>;
 		};
 
 		novatek@62 {
