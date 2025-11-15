@@ -1,7 +1,7 @@
 &soc {
 	int_codec: sound {
-		compatible = "xiaomi,vince", "qcom,msm8952-audio-codec";
-		status = "okay";
+		compatible = "xiaomi,vince", "qcom,msm8952-snd-card";
+		status = "ok";
 		qcom,msm-hs-micbias-type = "internal";
 		qcom,audio-routing =
 			"RX_BIAS", "MCLK",
