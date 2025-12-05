@@ -3693,8 +3693,8 @@ static int synaptics_rmi4_get_reg(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 	retval = regulator_set_voltage(rmi4_data->pwr_reg,
-			2800000,
-			2800000);
+			2750000,
+			2750000);
 	if (retval < 0) {
 		dev_err(rmi4_data->pdev->dev.parent,
 				"%s: Failed to set regulator voltage avdd\n",
@@ -3724,8 +3724,8 @@ static int synaptics_rmi4_get_reg(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 	retval = regulator_set_voltage(rmi4_data->bus_reg,
-			1800000,
-			1800000);
+			1750000,
+			1750000);
 	if (retval < 0) {
 		dev_err(rmi4_data->pdev->dev.parent,
 				"%s: Failed to set regulator voltage avdd\n",

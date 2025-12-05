@@ -46,7 +46,7 @@
 #define FW_IHEX_NAME "synaptics/startup_fw_update.bin"
 #define FW_IMAGE_NAME "synaptics/startup_fw_update.img"
 
-#define ENABLE_SYS_REFLASH false
+#define ENABLE_SYS_REFLASH true
 #define FORCE_UPDATE false
 #define DO_LOCKDOWN false
 
