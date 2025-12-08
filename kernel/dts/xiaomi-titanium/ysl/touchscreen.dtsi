@@ -5,7 +5,7 @@
 		compatible = "goodix,gt9xx";
 		reg = <0x5d>;
 		interrupt-parent = <&tlmm>;
-		interrupts = <65 0x2>;
+		interrupts = <65 IRQ_TYPE_EDGE_FALLING>;
 		vdd_ana-supply = <&pm8953_l10>;
 		vcc_i2c-supply = <&pm8953_l6>;
 		// pins used by touchscreen
@@ -59,7 +59,7 @@
 		focaltech,ic-type = <0x54460402>; // _FT5446
 		reg = <0x38>;
 		interrupt-parent = <&tlmm>;
-		interrupts = <65 0x2>;
+		interrupts = <65 IRQ_TYPE_EDGE_FALLING>;
 		vdd-supply = <&pm8953_l10>;
 		vcc_i2c-supply = <&pm8953_l6>;
 		/* pins used by touchscreen */
