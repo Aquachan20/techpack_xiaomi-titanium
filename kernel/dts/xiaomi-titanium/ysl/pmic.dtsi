@@ -34,7 +34,7 @@
     qcom,pmi8940@2 {  
    		qpnp_smbcharger: qcom,qpnp-smbcharger {
 			spmi-dev-container;
-			compatible = "qcom,qpnp-smbcharger";
+			compatible = "qcom,qpnp-smbcharger-mi8953";
 			#address-cells = <1>;
 			#size-cells = <1>;
 
@@ -73,7 +73,7 @@
 	
 		qcom_fg: qcom,fg {
 			spmi-dev-container;
-			compatible = "qcom,qpnp-fg";
+			compatible = "qcom,qpnp-fg-mi8953";
 			#address-cells = <1>;
 			#size-cells = <1>;
 			status = "okay";
