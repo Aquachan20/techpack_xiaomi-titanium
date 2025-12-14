@@ -25,5 +25,15 @@
 			synaptics,reset-on-state = <0>;
 			synaptics,ub-i2c-addr = <0x2c>;
 		};
+
+		novatek@62 {
+			compatible = "novatek,NVT-ts";
+			reg = <0x62>;
+			status = "ok";
+			interrupt-parent = <&tlmm>;
+			interrupts = <65 IRQ_TYPE_EDGE_FALLING>;
+			novatek,reset-gpio = <&tlmm 64 0x0>;
+			novatek,irq-gpio = <&tlmm 65 0x2001>;
+		};
 	};
 };
