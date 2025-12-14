@@ -3,9 +3,9 @@
  *
  * Copyright (C) 2012-2016 Synaptics Incorporated. All rights reserved.
  *
+ * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  * Copyright (C) 2012 Alexandra Chin <alexandra.chin@tw.synaptics.com>
  * Copyright (C) 2012 Scott Lin <scott.lin@tw.synaptics.com>
- * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +48,8 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+
+#include <drm/drm_panel.h>
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 38))
 #define KERNEL_ABOVE_2_6_38
@@ -301,7 +303,6 @@ struct synaptics_rmi4_f01_device_status {
 		unsigned char data[1];
 	};
 };
-
 /*
  * struct synaptics_rmi4_data - RMI4 device instance data
  * @pdev: pointer to platform device
@@ -347,6 +348,7 @@ struct synaptics_rmi4_f01_device_status {
  * @sensor_max_y: maximum y coordinate for 2D touch
  * @force_min: minimum force value
  * @force_max: maximum force value
+ * @set_wakeup_gesture: location of set wakeup gesture
  * @flash_prog_mode: flag to indicate flash programming mode status
  * @irq_enabled: flag to indicate attention interrupt enable status
  * @fingers_on_2d: flag to indicate presence of fingers in 2D area
@@ -368,6 +370,7 @@ struct synaptics_rmi4_f01_device_status {
  * @report_touch: pointer to touch reporting function
  */
 struct synaptics_rmi4_data {
+	bool initialized;
 	struct platform_device *pdev;
 	struct input_dev *input_dev;
 	struct input_dev *stylus_dev;
@@ -375,7 +378,7 @@ struct synaptics_rmi4_data {
 	struct synaptics_rmi4_device_info rmi4_mod_info;
 	struct synaptics_rmi4_input_settings input_settings;
 	struct synaptics_rmi4_fn_desc rmi_fd;
- 	struct synaptics_rmi4_f01_device_status status;
+	struct synaptics_rmi4_f01_device_status status;
 	struct kobject *board_prop_dir;
 	struct regulator *pwr_reg;
 	struct regulator *bus_reg;
@@ -387,9 +390,9 @@ struct synaptics_rmi4_data {
 	struct mutex rmi4_esd_mutex;
 	struct delayed_work rb_work;
 	struct workqueue_struct *rb_workqueue;
-#ifdef CONFIG_FB
+	struct work_struct rmi4_probe_work;
+	struct workqueue_struct *rmi4_probe_wq;
 	struct notifier_block fb_notifier;
-	struct work_struct pm_work;
 	struct work_struct reset_work;
 	struct workqueue_struct *reset_workqueue;
 #endif
@@ -427,6 +430,7 @@ struct synaptics_rmi4_data {
 	int sensor_max_y;
 	int force_min;
 	int force_max;
+	int set_wakeup_gesture;
 	bool flash_prog_mode;
 	bool irq_enabled;
 	bool fingers_on_2d;
@@ -481,14 +485,14 @@ struct synaptics_rmi4_exp_fn {
 			unsigned char intr_mask);
 };
 
-int synaptics_rmi4_bus_init_lansi(void);
+int synaptics_rmi4_bus_init(void);
 
-void synaptics_rmi4_bus_exit_lansi(void);
+void synaptics_rmi4_bus_exit(void);
 
-void synaptics_rmi4_new_function_lansi(struct synaptics_rmi4_exp_fn *exp_fn_module,
+void synaptics_rmi4_new_function(struct synaptics_rmi4_exp_fn *exp_fn_module,
 		bool insert);
 
-int synaptics_fw_updater_lansi(const unsigned char *fw_data);
+int synaptics_fw_updater(const unsigned char *fw_data);
 
 static inline int synaptics_rmi4_reg_read(
 		struct synaptics_rmi4_data *rmi4_data,
