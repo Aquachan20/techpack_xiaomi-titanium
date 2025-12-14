@@ -142,7 +142,6 @@ static int fwu_do_reflash(void);
 
 static int fwu_recovery_check_status(void);
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 static ssize_t fwu_sysfs_show_image(struct file *data_file,
 		struct kobject *kobj, struct bin_attribute *attributes,
 		char *buf, loff_t pos, size_t count);
@@ -211,8 +210,6 @@ static ssize_t fwu_sysfs_write_lockdown_code_store(struct device *dev,
 
 static ssize_t fwu_sysfs_read_lockdown_code_show(struct device *dev,
 		struct device_attribute *attr, char *buf);
-#endif
-
 #endif
 
 enum f34_version {
@@ -771,7 +768,6 @@ struct synaptics_rmi4_fwu_handle {
 	struct work_struct fwu_work;
 };
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 static struct bin_attribute dev_attr_data = {
 	.attr = {
 		.name = "data",
@@ -781,10 +777,8 @@ static struct bin_attribute dev_attr_data = {
 	.read = fwu_sysfs_show_image,
 	.write = fwu_sysfs_store_image,
 };
-#endif
 
 static struct device_attribute attrs[] = {
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 	__ATTR(dorecovery, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_do_recovery_store),
@@ -845,13 +839,11 @@ static struct device_attribute attrs[] = {
 			fwu_sysfs_read_lockdown_code_show,
 			fwu_sysfs_write_lockdown_code_store),
 #endif
-#endif
 };
 
 static struct synaptics_rmi4_fwu_handle *fwu;
 
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 #if defined (SYNAPTICS_LOCK_DOWN_INFO)
 #define CTP_PROC_LOCKDOWN_FILE "tp_lockdown_info"
 DEFINE_MUTEX(fwu_sysfs_mutex_lansi);
@@ -882,7 +874,7 @@ static const struct file_operations ctp_lockdown_proc_fops = {
 	.open = ctp_lockdown_proc_open,
 	.read = seq_read,
 };
-#endif
+
 DECLARE_COMPLETION (fwu_remove_complete_lansi);
 
 
@@ -3129,7 +3121,6 @@ static int fwu_check_dp_configuration_size(void)
 	return 0;
 }
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 static int fwu_check_pm_configuration_size(void)
 {
 	unsigned short block_count;
@@ -3146,7 +3137,6 @@ static int fwu_check_pm_configuration_size(void)
 
 	return 0;
 }
-#endif
 
 static int fwu_check_bl_configuration_size(void)
 {
@@ -3514,7 +3504,6 @@ static int fwu_write_dp_configuration(void)
 	return fwu_write_configuration();
 }
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 static int fwu_write_pm_configuration(void)
 {
 	fwu->config_area = PM_CONFIG_AREA;
@@ -3539,7 +3528,6 @@ static int fwu_write_tddi_lockdown_data(void)
 	rmi4_data->reset_device(rmi4_data, false);
 	return 0;
 }
-#endif
 #endif
 
 static int fwu_write_flash_configuration(void)
@@ -3829,7 +3817,6 @@ static int fwu_do_reflash(void)
 	return retval;
 }
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 static int fwu_do_read_config(void)
 {
 	int retval;
@@ -4142,7 +4129,6 @@ exit:
 	return retval;
 }
 #endif
-#endif
 
 static int fwu_do_lockdown_v7(void)
 {
@@ -4293,7 +4279,6 @@ static int fwu_do_restore_f51_cal_data(void)
 }
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 static int fwu_start_write_guest_code(void)
 {
 	int retval;
@@ -4499,7 +4484,6 @@ exit:
 
 	return retval;
 }
-#endif
 static char tp_info_summary[80] = "";
 
 static int fwu_start_reflash(void)
@@ -5144,7 +5128,6 @@ static void fwu_startup_fw_update_work(struct work_struct *work)
 }
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 static ssize_t fwu_sysfs_show_image(struct file *data_file,
 		struct kobject *kobj, struct bin_attribute *attributes,
 		char *buf, loff_t pos, size_t count)
@@ -5783,7 +5766,6 @@ static ssize_t fwu_sysfs_write_lockdown_code_store(struct device *dev,
 	return count;
 }
 #endif
-#endif
 static void synaptics_rmi4_fwu_attn(struct synaptics_rmi4_data *rmi4_data,
 		unsigned char intr_mask)
 {
@@ -5917,7 +5899,6 @@ printk ("before get_tddi_lockdown_data_lansi");
 	if (ENABLE_SYS_REFLASH == false)
 		return 0;
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 	retval = sysfs_create_bin_file(&rmi4_data->input_dev->dev.kobj,
 			&dev_attr_data);
 	if (retval < 0) {
@@ -5926,7 +5907,6 @@ printk ("before get_tddi_lockdown_data_lansi");
 				__func__);
 		goto exit_free_mem;
 	}
-#endif
 
 	for (attr_count = 0; attr_count < ARRAY_SIZE(attrs); attr_count++) {
 		retval = sysfs_create_file(&rmi4_data->input_dev->dev.kobj,
@@ -5948,9 +5928,7 @@ exit_remove_attrs:
 				&attrs[attr_count].attr);
 	}
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 	sysfs_remove_bin_file(&rmi4_data->input_dev->dev.kobj, &dev_attr_data);
-#endif
 
 exit_free_mem:
 	kfree(fwu->image_name);
@@ -5993,9 +5971,7 @@ static void synaptics_rmi4_fwu_remove(struct synaptics_rmi4_data *rmi4_data)
 				&attrs[attr_count].attr);
 	}
 
-#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_DSX_FW_UPDATE_EXTRA_SYSFS
 	sysfs_remove_bin_file(&rmi4_data->input_dev->dev.kobj, &dev_attr_data);
-#endif
 
 exit:
 	complete (&fwu_remove_complete_lansi);
