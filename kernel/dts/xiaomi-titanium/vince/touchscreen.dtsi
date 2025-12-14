@@ -27,7 +27,7 @@
 		};
 
 		novatek@62 {
-			compatible = "novatek,NVT-ts";
+			compatible = "novatek,NVT-ts_vince";
 			reg = <0x62>;
 			status = "ok";
 			interrupt-parent = <&tlmm>;
