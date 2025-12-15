@@ -3,9 +3,9 @@
  *
  * Copyright (C) 2012-2016 Synaptics Incorporated. All rights reserved.
  *
- * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
  * Copyright (C) 2012 Alexandra Chin <alexandra.chin@tw.synaptics.com>
  * Copyright (C) 2012 Scott Lin <scott.lin@tw.synaptics.com>
+ * Copyright (C) 2018 XiaoMi, Inc.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,11 +41,12 @@
 #include <linux/types.h>
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
+
 #include "synaptics_dsx_lansi.h"
 #include "synaptics_dsx_core.h"
-#include "linux/moduleparam.h"
 
 #define SYN_I2C_RETRY_TIMES 10
+
 #define rd_msgs  1
 
 static unsigned char *wr_buf;
@@ -53,7 +54,6 @@ static unsigned char *wr_buf;
 static struct synaptics_dsx_hw_interface hw_if;
 
 static struct platform_device *synaptics_dsx_i2c_device;
-
 
 #ifdef CONFIG_OF
 static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
@@ -67,7 +67,6 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 	bdata->irq_gpio = of_get_named_gpio_flags(np,
 			"synaptics,irq-gpio", 0,
 			(enum of_gpio_flags *)&bdata->irq_flags);
-
 	retval = of_property_read_u32(np, "synaptics,irq-on-state",
 			&value);
 	if (retval < 0)
@@ -169,9 +168,14 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 		bdata->max_y_for_2d = -1;
 	}
 
-	bdata->swap_axes = of_property_read_bool(np, "synaptics,swap-axes");
-	bdata->x_flip = of_property_read_bool(np, "synaptics,x-flip");
-	bdata->y_flip = of_property_read_bool(np, "synaptics,y-flip");
+	prop = of_find_property(np, "synaptics,swap-axes", NULL);
+	bdata->swap_axes = prop > 0 ? true : false;
+
+	prop = of_find_property(np, "synaptics,x-flip", NULL);
+	bdata->x_flip = prop > 0 ? true : false;
+
+	prop = of_find_property(np, "synaptics,y-flip", NULL);
+	bdata->y_flip = prop > 0 ? true : false;
 
 	prop = of_find_property(np, "synaptics,ub-i2c-addr", NULL);
 	if (prop && prop->length) {
@@ -186,6 +190,12 @@ static int parse_dt(struct device *dev, struct synaptics_dsx_board_data *bdata)
 	} else {
 		bdata->ub_i2c_addr = -1;
 	}
+
+	retval = of_property_read_string(np, "synaptics,fw-name", &name);
+	if (retval < 0)
+		bdata->fw_name = NULL;
+	else
+		bdata->fw_name = name;
 
 	prop = of_find_property(np, "synaptics,cap-button-codes", NULL);
 	if (prop && prop->length) {
@@ -277,12 +287,12 @@ static int synaptics_rmi4_i2c_set_page(struct synaptics_rmi4_data *rmi4_data,
 	unsigned char page;
 	struct i2c_client *i2c = to_i2c_client(rmi4_data->pdev->dev.parent);
 	struct i2c_msg msg[2];
-
-	buf = kcalloc(PAGE_SELECT_LEN, sizeof(char), GFP_KERNEL);
-	if (!buf) {
-		retval = -ENOMEM;
-		goto exit;
-	}
+ 
+ 	buf = kcalloc(PAGE_SELECT_LEN, sizeof(char), GFP_KERNEL);
+ 	if (!buf) {
+ 		retval = -ENOMEM;
+ 		goto exit;
+ 	}
 
 	msg[0].addr = hw_if.board_data->i2c_addr;
 	msg[0].flags = 0;
@@ -295,7 +305,7 @@ static int synaptics_rmi4_i2c_set_page(struct synaptics_rmi4_data *rmi4_data,
 
 	if (page != rmi4_data->current_page) {
 		for (retry = 0; retry < SYN_I2C_RETRY_TIMES; retry++) {
-			if (i2c_transfer(i2c->adapter, &msg[0], 1) == 1) {
+			if (i2c_transfer(i2c->adapter, msg, 1) == 1) {
 				rmi4_data->current_page = page;
 				retval = PAGE_SELECT_LEN;
 				break;
@@ -322,7 +332,7 @@ exit:
 static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 		unsigned short addr, unsigned char *data, unsigned int length)
 {
-	int retval = 0;
+	int retval;
 	unsigned char retry;
 	unsigned char *buf = NULL;
 	unsigned char index = 0;
@@ -338,10 +348,10 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 	mutex_lock(&rmi4_data->rmi4_io_ctrl_mutex);
 
 	buf = kcalloc(1, sizeof(char), GFP_KERNEL);
-	if (!buf) {
-		retval = -ENOMEM;
-		goto exit;
-	}
+ 	if (!buf) {
+ 		retval = -ENOMEM;
+ 		goto exit;
+ 	}
 
 	retval = synaptics_rmi4_i2c_set_page(rmi4_data, addr);
 	if (retval != PAGE_SELECT_LEN) {
@@ -399,6 +409,7 @@ static int synaptics_rmi4_i2c_read(struct synaptics_rmi4_data *rmi4_data,
 exit:
 	kfree(buf);
 	mutex_unlock(&rmi4_data->rmi4_io_ctrl_mutex);
+
 	return retval;
 }
 
@@ -437,7 +448,7 @@ static int synaptics_rmi4_i2c_write(struct synaptics_rmi4_data *rmi4_data,
 	}
 
 	for (retry = 0; retry < SYN_I2C_RETRY_TIMES; retry++) {
-		if (i2c_transfer(i2c->adapter, &msg[0], 1) == 1) {
+		if (i2c_transfer(i2c->adapter, msg, 1) == 1) {
 			retval = length;
 			break;
 		}
@@ -592,19 +603,19 @@ static struct i2c_driver synaptics_rmi4_i2c_driver = {
 	.id_table = synaptics_rmi4_id_table,
 };
 
-int synaptics_rmi4_bus_init(void)
+int synaptics_rmi4_bus_init_lansi(void)
 {
 	return i2c_add_driver(&synaptics_rmi4_i2c_driver);
 }
-EXPORT_SYMBOL(synaptics_rmi4_bus_init);
+EXPORT_SYMBOL(synaptics_rmi4_bus_init_lansi);
 
-void synaptics_rmi4_bus_exit(void)
+void synaptics_rmi4_bus_exit_lansi(void)
 {
 	kfree(wr_buf);
 
 	i2c_del_driver(&synaptics_rmi4_i2c_driver);
 }
-EXPORT_SYMBOL(synaptics_rmi4_bus_exit);
+EXPORT_SYMBOL(synaptics_rmi4_bus_exit_lansi);
 
 MODULE_AUTHOR("Synaptics, Inc.");
 MODULE_DESCRIPTION("Synaptics DSX I2C Bus Support Module");
