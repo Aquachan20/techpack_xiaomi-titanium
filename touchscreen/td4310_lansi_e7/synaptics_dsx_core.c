@@ -2584,6 +2584,16 @@ static int synaptics_rmi4_f12_init (struct synaptics_rmi4_data *rmi4_data,
 			goto exit;
 	}
 
+	retval = synaptics_rmi4_f12_find_sub(rmi4_data,
+			fhandler, query_5->data, sizeof(query_5->data),
+			6, 20, 0);
+	if (retval == 1)
+		rmi4_data->set_wakeup_gesture = 2;
+	else if (retval == 0)
+		rmi4_data->set_wakeup_gesture = 0;
+	else if (retval < 0)
+		goto exit;
+
 	retval = synaptics_rmi4_reg_read (rmi4_data,
 			fhandler->full_addr.ctrl_base + ctrl_23_offset,
 			ctrl_23->data,
