@@ -1737,7 +1737,7 @@ static const struct file_operations nvt_ito_test_result_proc_fops = {
 int32_t nvt_mp_proc_init(void)
 {
 	struct device_node *np = ts->client->dev.of_node;
-	unsigned char mpcriteria[32] = {0};
+	unsigned char mpcriteria[64] = {0};	//novatek-mp-criteria-default
 
 	NVT_ito_test_result_entry = proc_create("ito_test_result", 0444, NULL, &nvt_ito_test_result_proc_fops);
 	if (NVT_ito_test_result_entry == NULL) {
