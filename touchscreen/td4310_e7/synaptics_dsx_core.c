@@ -724,29 +724,29 @@ static struct siginfo interrupt_signal;
 #endif
 
 static struct device_attribute attrs[] = {
-	__ATTR (reset, (S_IWUSR | S_IWGRP),
+	__ATTR(reset, 0220,
 			synaptics_rmi4_show_error,
 			synaptics_rmi4_f01_reset_store),
-	__ATTR (productinfo, S_IRUGO,
+	__ATTR(productinfo, 0444,
 			synaptics_rmi4_f01_productinfo_show,
 			synaptics_rmi4_store_error),
-	__ATTR (buildid, S_IRUGO,
+	__ATTR(buildid, 0444,
 			synaptics_rmi4_f01_buildid_show,
 			synaptics_rmi4_store_error),
-	__ATTR (flashprog, S_IRUGO,
+	__ATTR(flashprog, 0444,
 			synaptics_rmi4_f01_flashprog_show,
 			synaptics_rmi4_store_error),
-	__ATTR (0dbutton, (S_IRUGO | S_IWUSR | S_IWGRP),
-			synaptics_rmi4_0dbutton_show,
+	__ATTR(0dbutton, 0664,
+		    synaptics_rmi4_0dbutton_show,
 			synaptics_rmi4_0dbutton_store),
-	__ATTR (suspend, (S_IWUSR | S_IWGRP),
+	__ATTR(suspend, 0220,
 			synaptics_rmi4_show_error,
 			synaptics_rmi4_suspend_store),
-	__ATTR (wake_gesture, (S_IRUGO | S_IWUSR | S_IWGRP),
+	__ATTR(wake_gesture, 0664,
 			synaptics_rmi4_wake_gesture_show,
 			synaptics_rmi4_wake_gesture_store),
 #ifdef USE_DATA_SERVER
-	__ATTR (synad_pid, (S_IWUSR | S_IWGRP),
+	__ATTR(synad_pid, 0220,
 			synaptics_rmi4_show_error,
 			synaptics_rmi4_synad_pid_store),
 #endif
@@ -755,7 +755,7 @@ static struct device_attribute attrs[] = {
 static struct kobj_attribute virtual_key_map_attr = {
 	.attr = {
 		.name = VIRTUAL_KEY_MAP_FILE_NAME,
-		.mode = S_IRUGO,
+		.mode = 0444,
 	},
 	.show = synaptics_rmi4_virtual_key_map_show,
 };
@@ -767,7 +767,7 @@ static ssize_t synaptics_rmi4_f01_reset_store (struct device *dev,
 	unsigned int reset;
 	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata (dev);
 
-	if (sscanf (buf, "%u", &reset) != 1)
+	if (kstrtouint(buf, 10, &reset) != 1)
 		return -EINVAL;
 
 	if (reset != 1)
@@ -847,7 +847,7 @@ static ssize_t synaptics_rmi4_0dbutton_store (struct device *dev,
 
 	rmi = &(rmi4_data->rmi4_mod_info);
 
-	if (sscanf (buf, "%u", &input) != 1)
+	if (kstrtouint(buf, 10, &input) != 1)
 		return -EINVAL;
 
 	input = input > 0 ? 1 : 0;
@@ -893,7 +893,7 @@ static ssize_t synaptics_rmi4_suspend_store (struct device *dev,
 {
 	unsigned int input;
 
-	if (sscanf (buf, "%u", &input) != 1)
+	if (kstrtouint(buf, 10, &input) != 1)
 		return -EINVAL;
 
 	if (input == 1)
@@ -920,10 +920,10 @@ static ssize_t synaptics_rmi4_wake_gesture_store (struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
 
-	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata (dev);
-	unsigned int input ;
+	unsigned int input;
+	struct synaptics_rmi4_data *rmi4_data = dev_get_drvdata(dev);
 
-	if (sscanf (buf, "%u", &input) != 1)
+	if (kstrtouint(buf, 10, &input) != 1)
 		return -EINVAL;
 
 	if (synaptics_gesture_func_on)
@@ -943,7 +943,7 @@ static ssize_t synaptics_rmi4_synad_pid_store (struct device *dev,
 {
 	unsigned int input;
 
-	if (sscanf (buf, "%u", &input) != 1)
+	if (kstrtouint(buf, 10, &input) != 1)
 		return -EINVAL;
 
 	synad_pid = input;
@@ -1057,9 +1057,11 @@ static int synaptics_rmi4_f12_wg (struct synaptics_rmi4_data *rmi4_data,
 	}
 
 	if (enable)
-		reporting_control[2] = F12_WAKEUP_GESTURE_MODE;
+		reporting_control[rmi4_data->set_wakeup_gesture] =
+					F12_WAKEUP_GESTURE_MODE;
 	else
-		reporting_control[2] = F12_CONTINUOUS_MODE;
+		reporting_control[rmi4_data->set_wakeup_gesture] =
+					F12_CONTINUOUS_MODE;
 
 	retval = synaptics_rmi4_reg_write (rmi4_data,
 			fhandler->full_addr.ctrl_base + offset,
@@ -1132,7 +1134,7 @@ static int synaptics_rmi4_f11_abs_report (struct synaptics_rmi4_data *rmi4_data,
 			input_sync (rmi4_data->input_dev);
 			input_report_key (rmi4_data->input_dev, KEY_WAKEUP, 0);
 			input_sync (rmi4_data->input_dev);
-			rmi4_data->suspend = false;
+			/* rmi4_data->suspend = false; */
 		}
 		synaptics_rmi4_wakeup_gesture (rmi4_data, false);
 		return 0;
@@ -2573,6 +2575,16 @@ static int synaptics_rmi4_f12_init (struct synaptics_rmi4_data *rmi4_data,
 		else if (retval < 0)
 			goto exit;
 	}
+
+	retval = synaptics_rmi4_f12_find_sub(rmi4_data,
+			fhandler, query_5->data, sizeof(query_5->data),
+			6, 20, 0);
+	if (retval == 1)
+		rmi4_data->set_wakeup_gesture = 2;
+	else if (retval == 0)
+		rmi4_data->set_wakeup_gesture = 0;
+	else if (retval < 0)
+		goto exit;
 
 	retval = synaptics_rmi4_reg_read (rmi4_data,
 			fhandler->full_addr.ctrl_base + ctrl_23_offset,
@@ -4051,7 +4063,7 @@ exit:
 #ifdef FB_READY_RESET
 static void synaptics_rmi4_reset_work (struct work_struct *work)
 {
-	int retval;
+	int retval = 0;
 	unsigned int timeout;
 	struct synaptics_rmi4_data *rmi4_data =
 			container_of (work, struct synaptics_rmi4_data,
@@ -4926,7 +4938,7 @@ static void __exit synaptics_rmi4_exit (void)
 	synaptics_rmi4_bus_exit ();
 }
 
-module_init (synaptics_rmi4_init);
+late_initcall(synaptics_rmi4_init);
 module_exit (synaptics_rmi4_exit);
 
 MODULE_AUTHOR ("Synaptics, Inc.");

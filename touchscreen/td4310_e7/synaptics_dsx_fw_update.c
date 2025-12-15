@@ -42,6 +42,7 @@
 #include <linux/platform_device.h>
 #include "synaptics_dsx.h"
 #include "synaptics_dsx_core.h"
+#include <linux/seq_file.h>
 #include <linux/proc_fs.h>
 
 
@@ -771,7 +772,7 @@ struct synaptics_rmi4_fwu_handle {
 static struct bin_attribute dev_attr_data = {
 	.attr = {
 		.name = "data",
-		.mode = (S_IRUGO | S_IWUSR | S_IWGRP),
+		.mode = 0664,
 	},
 	.size = 0,
 	.read = fwu_sysfs_show_image,
@@ -779,63 +780,63 @@ static struct bin_attribute dev_attr_data = {
 };
 
 static struct device_attribute attrs[] = {
-	__ATTR (dorecovery, (S_IWUSR | S_IWGRP),
+	__ATTR(dorecovery, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_do_recovery_store),
-	__ATTR (doreflash, (S_IWUSR | S_IWGRP),
+	__ATTR(doreflash, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_do_reflash_store),
-	__ATTR (writeconfig, (S_IWUSR | S_IWGRP),
+	__ATTR(writeconfig, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_write_config_store),
-	__ATTR (readconfig, (S_IWUSR | S_IWGRP),
+	__ATTR(readconfig, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_read_config_store),
-	__ATTR (configarea, (S_IWUSR | S_IWGRP),
+	__ATTR(configarea, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_config_area_store),
-	__ATTR (imagename, (S_IWUSR | S_IWGRP),
+	__ATTR(imagename, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_image_name_store),
-	__ATTR (imagesize, (S_IWUSR | S_IWGRP),
+	__ATTR(imagesize, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_image_size_store),
-	__ATTR (blocksize, S_IRUGO,
+	__ATTR(blocksize, 0444,
 			fwu_sysfs_block_size_show,
 			synaptics_rmi4_store_error),
-	__ATTR (fwblockcount, S_IRUGO,
+	__ATTR(fwblockcount, 0444,
 			fwu_sysfs_firmware_block_count_show,
 			synaptics_rmi4_store_error),
-	__ATTR (configblockcount, S_IRUGO,
+	__ATTR(configblockcount, 0444,
 			fwu_sysfs_configuration_block_count_show,
 			synaptics_rmi4_store_error),
-	__ATTR (dispconfigblockcount, S_IRUGO,
+	__ATTR(dispconfigblockcount, 0444,
 			fwu_sysfs_disp_config_block_count_show,
 			synaptics_rmi4_store_error),
-	__ATTR (permconfigblockcount, S_IRUGO,
+	__ATTR(permconfigblockcount, 0444,
 			fwu_sysfs_perm_config_block_count_show,
 			synaptics_rmi4_store_error),
-	__ATTR (blconfigblockcount, S_IRUGO,
+	__ATTR(blconfigblockcount, 0444,
 			fwu_sysfs_bl_config_block_count_show,
 			synaptics_rmi4_store_error),
-	__ATTR (uppblockcount, S_IRUGO,
+	__ATTR(uppblockcount, 0444,
 			fwu_sysfs_utility_parameter_block_count_show,
 			synaptics_rmi4_store_error),
-	__ATTR (guestcodeblockcount, S_IRUGO,
+	__ATTR(guestcodeblockcount, 0444,
 			fwu_sysfs_guest_code_block_count_show,
 			synaptics_rmi4_store_error),
-	__ATTR (writeguestcode, (S_IWUSR | S_IWGRP),
+	__ATTR(writeguestcode, 0220,
 			synaptics_rmi4_show_error,
 			fwu_sysfs_write_guest_code_store),
-	__ATTR (guestserialization, S_IRUGO,
+	__ATTR (guestserialization, 0444,
 			fwu_sysfs_read_guest_serialization_show,
 			synaptics_rmi4_store_error),
-	__ATTR (panelcolor, S_IRUGO,
+	__ATTR (panelcolor, 0444,
 			fwu_sysfs_read_panel_color_show,
 			NULL),
 
 #ifdef SYNA_TDDI
-	__ATTR (lockdowncode, (S_IWUSR | S_IWGRP | S_IRUGO),
+	__ATTR(lockdowncode, 0664,
 			fwu_sysfs_read_lockdown_code_show,
 			fwu_sysfs_write_lockdown_code_store),
 #endif
@@ -5214,10 +5215,12 @@ static ssize_t fwu_sysfs_do_recovery_store (struct device *dev,
 	struct synaptics_rmi4_data *rmi4_data = fwu->rmi4_data;
 
 	if (!mutex_trylock (&fwu_sysfs_mutex))
+		return -EBUSY;
 
 
-	if (sscanf (buf, "%u", &input) != 1) {
+	if (kstrtouint(buf, 10, &input) != 1) {
 		retval = -EINVAL;
+		goto exit;
 
 	}
 
@@ -5226,11 +5229,13 @@ static ssize_t fwu_sysfs_do_recovery_store (struct device *dev,
 				"%s: Not in microbootloader mode\n",
 				__func__);
 		retval = -EINVAL;
+		goto exit;
 
 	}
 
 	if (!fwu->ext_data_source) {
 		retval = -EINVAL;
+		goto exit;
 
 	} else {
 		fwu->image = fwu->ext_data_source;
@@ -5241,12 +5246,13 @@ static ssize_t fwu_sysfs_do_recovery_store (struct device *dev,
 		dev_err (rmi4_data->pdev->dev.parent,
 				"%s: Failed to do recovery\n",
 				__func__);
+		goto exit;
 
 	}
 
 	retval = count;
 
-
+exit:
 	kfree (fwu->ext_data_source);
 	fwu->ext_data_source = NULL;
 	fwu->image = NULL;
@@ -5262,10 +5268,12 @@ static ssize_t fwu_sysfs_do_reflash_store (struct device *dev,
 	struct synaptics_rmi4_data *rmi4_data = fwu->rmi4_data;
 
 	if (!mutex_trylock (&fwu_sysfs_mutex))
+		return -EBUSY;
 
 
-	if (sscanf (buf, "%u", &input) != 1) {
+	if (kstrtouint(buf, 10, &input) != 1) {
 		retval = -EINVAL;
+		goto exit;
 
 	}
 
@@ -5274,11 +5282,13 @@ static ssize_t fwu_sysfs_do_reflash_store (struct device *dev,
 				"%s: In microbootloader mode\n",
 				__func__);
 		retval = -EINVAL;
+		goto exit;
 
 	}
 
 	if (!fwu->ext_data_source) {
 		retval =  -EINVAL;
+		goto exit;
 
 	} else {
 		fwu->image = fwu->ext_data_source;
@@ -5291,6 +5301,7 @@ static ssize_t fwu_sysfs_do_reflash_store (struct device *dev,
 
 	if ((input != NORMAL) && (input != FORCE)) {
 		retval = -EINVAL;
+		goto exit;
 
 	}
 
@@ -5302,12 +5313,13 @@ static ssize_t fwu_sysfs_do_reflash_store (struct device *dev,
 		dev_err (rmi4_data->pdev->dev.parent,
 				"%s: Failed to do reflash\n",
 				__func__);
+		goto exit;
 
 	}
 
 	retval = count;
 
-
+exit:
 	kfree (fwu->ext_data_source);
 	fwu->ext_data_source = NULL;
 	fwu->image = NULL;
@@ -5327,7 +5339,7 @@ static ssize_t fwu_sysfs_write_config_store (struct device *dev,
 	if (!mutex_trylock (&fwu_sysfs_mutex))
 		return -EBUSY;
 
-	if (sscanf (buf, "%u", &input) != 1) {
+	if (kstrtouint(buf, 10, &input) != 1) {
 		retval = -EINVAL;
 		goto exit;
 	}
@@ -5377,7 +5389,7 @@ static ssize_t fwu_sysfs_read_config_store (struct device *dev,
 	unsigned int input;
 	struct synaptics_rmi4_data *rmi4_data = fwu->rmi4_data;
 
-	if (sscanf (buf, "%u", &input) != 1)
+	if (kstrtouint(buf, 10, &input) != 1)
 		return -EINVAL;
 
 	if (input != 1)
@@ -5629,7 +5641,7 @@ static ssize_t fwu_sysfs_write_guest_code_store (struct device *dev,
 	if (!mutex_trylock (&fwu_sysfs_mutex))
 		return -EBUSY;
 
-	if (sscanf (buf, "%u", &input) != 1) {
+	if (kstrtouint(buf, 10, &input) != 1) {
 		retval = -EINVAL;
 		goto exit;
 	}
@@ -5732,7 +5744,7 @@ static ssize_t fwu_sysfs_read_lockdown_code_show (struct device *dev,
 	}
 
 	for (i = 0; i < lockdown_data_size; i++) {
-		retval += snprintf (ld_val, sizeof(ld_val), "%02x",
+		retval += snprintf(ld_val, PAGE_SIZE, "%02x",
 				*(lockdown_data + i));
 		strlcat (buf, ld_val, lockdown_data_size);
 	}
@@ -5768,9 +5780,9 @@ static ssize_t fwu_sysfs_write_lockdown_code_store (struct device *dev,
 		return -ENOMEM;
 
 	for (i = 0; i < lockdown_data_size; i++) {
-		memcpy (temp, (buf + 2 * i), sizeof (temp));
-		if (sscanf (temp, "%02x", &ld_val) == 1)
-			 *(lockdown_data + i) = ld_val & 0xff;
+		memcpy(temp, (buf + 2 * i), sizeof(temp));
+		if (kstrtoint(temp, 16, &ld_val) == 1)
+			*(lockdown_data + i) = ld_val & 0xff;
 	}
 
 	if (!mutex_trylock (&fwu_sysfs_mutex))
