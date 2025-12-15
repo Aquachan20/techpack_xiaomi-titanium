@@ -23,7 +23,6 @@
 #include <linux/irq.h>
 #include <linux/gpio.h>
 #include <linux/proc_fs.h>
-#include <linux/uaccess.h>
 #include <linux/input/mt.h>
 #include <linux/pm_wakeup.h>
 
@@ -32,6 +31,9 @@
 #include <linux/uaccess.h>
 
 #if defined(CONFIG_FB)
+#ifdef CONFIG_DRM_MSM
+#include <linux/msm_drm_notify.h>
+#endif
 #include <linux/notifier.h>
 #include <linux/fb.h>
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
@@ -76,7 +78,11 @@ extern int32_t Resume_PD(void);
 #endif
 
 #if defined(CONFIG_FB)
-static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
+#ifdef _MSM_DRM_NOTIFY_H_
+static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
+#else
+static int nvt_fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data);
+#endif
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 static void nvt_ts_early_suspend(struct early_suspend *h);
 static void nvt_ts_late_resume(struct early_suspend *h);
@@ -1396,18 +1402,27 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 #endif
 
 #if defined(CONFIG_FB)
-	ts->fb_notif.notifier_call = fb_notifier_callback;
+#ifdef _MSM_DRM_NOTIFY_H_
+	ts->drm_notif.notifier_call = nvt_drm_notifier_callback;
+	ret = msm_drm_register_client(&ts->drm_notif);
+	if(ret) {
+		NVT_ERR("register drm_notifier failed. ret=%d\n", ret);
+		goto err_register_drm_notif_failed;
+	}
+#else
+	ts->fb_notif.notifier_call = nvt_fb_notifier_callback;
 	ret = fb_register_client(&ts->fb_notif);
-	if (ret) {
+	if(ret) {
 		NVT_ERR("register fb_notifier failed. ret=%d\n", ret);
 		goto err_register_fb_notif_failed;
 	}
+#endif
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	ts->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 1;
 	ts->early_suspend.suspend = nvt_ts_early_suspend;
 	ts->early_suspend.resume = nvt_ts_late_resume;
 	ret = register_early_suspend(&ts->early_suspend);
-	if (ret) {
+	if(ret) {
 		NVT_ERR("register early suspend failed. ret=%d\n", ret);
 		goto err_register_early_suspend_failed;
 	}
@@ -1429,8 +1444,17 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	return 0;
 
 #if defined(CONFIG_FB)
+#ifdef _MSM_DRM_NOTIFY_H_
+	if (msm_drm_unregister_client(&ts->drm_notif))
+		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+err_register_drm_notif_failed:
+#else
+	if (fb_unregister_client(&ts->fb_notif))
+		NVT_ERR("Error occurred while unregistering fb_notifier.\n");
 err_register_fb_notif_failed:
+#endif
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
+	unregister_early_suspend(&ts->early_suspend);
 err_register_early_suspend_failed:
 #endif
 #if (NVT_TOUCH_PROC || NVT_TOUCH_EXT_PROC || NVT_TOUCH_MP)
@@ -1467,8 +1491,13 @@ static int32_t nvt_ts_remove(struct i2c_client *client)
 
 
 #if defined(CONFIG_FB)
+#ifdef _MSM_DRM_NOTIFY_H_
+	if (msm_drm_unregister_client(&ts->drm_notif))
+		NVT_ERR("Error occurred while unregistering drm_notifier.\n");
+#else
 	if (fb_unregister_client(&ts->fb_notif))
 		NVT_ERR("Error occurred while unregistering fb_notifier.\n");
+#endif
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
 	unregister_early_suspend(&ts->early_suspend);
 #endif
@@ -1596,53 +1625,58 @@ static int32_t nvt_ts_resume(struct device *dev)
 
 
 #if defined(CONFIG_FB)
+#ifdef _MSM_DRM_NOTIFY_H_
+static int nvt_drm_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+{
+	struct msm_drm_notifier *evdata = data;
+	int *blank;
+	struct nvt_ts_data *ts =
+		container_of(self, struct nvt_ts_data, drm_notif);
 
-#ifdef CONFIG_PROJECT_VINCE
-	static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
-	{
-		struct fb_event *evdata = data;
-		int *blank;
-		struct nvt_ts_data *ts =
-			container_of(self, struct nvt_ts_data, fb_notif);
+	if (!evdata || (evdata->id != 0))
+		return 0;
 
-		struct NVT_CSOT_ESD *nvt_csot_esd_status = get_nvt_csot_esd_status();
-
-		if (evdata && evdata->data && event == FB_EARLY_EVENT_BLANK) {
-			blank = evdata->data;
-			if ((*blank == FB_BLANK_POWERDOWN)&&(nvt_csot_esd_status->ESD_TE_status == false)) {
+	if (evdata->data && ts) {
+		blank = evdata->data;
+		if (event == MSM_DRM_EARLY_EVENT_BLANK) {
+			if (*blank == MSM_DRM_BLANK_POWERDOWN) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 				nvt_ts_suspend(&ts->client->dev);
 			}
-		} else if (evdata && evdata->data && event == FB_EVENT_BLANK) {
-			blank = evdata->data;
-			if (*blank == FB_BLANK_UNBLANK) {
+		} else if (event == MSM_DRM_EVENT_BLANK) {
+			if (*blank == MSM_DRM_BLANK_UNBLANK) {
+				NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
 				nvt_ts_resume(&ts->client->dev);
 			}
 		}
-
-		return 0;
 	}
+
+	return 0;
+}
 #else
-	static int fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
-	{
-		struct fb_event *evdata = data;
-		int *blank;
-		struct nvt_ts_data *ts =
-			container_of(self, struct nvt_ts_data, fb_notif);
+static int nvt_fb_notifier_callback(struct notifier_block *self, unsigned long event, void *data)
+{
+	struct fb_event *evdata = data;
+	int *blank;
+	struct nvt_ts_data *ts =
+		container_of(self, struct nvt_ts_data, fb_notif);
 
-		if (evdata && evdata->data && event == FB_EARLY_EVENT_BLANK) {
-			blank = evdata->data;
-			if (*blank == FB_BLANK_POWERDOWN) {
-				nvt_ts_suspend(&ts->client->dev);
-			}
-		} else if (evdata && evdata->data && event == FB_EVENT_BLANK) {
-			blank = evdata->data;
-			if (*blank == FB_BLANK_UNBLANK) {
-				nvt_ts_resume(&ts->client->dev);
-			}
+	if (evdata && evdata->data && event == FB_EARLY_EVENT_BLANK) {
+		blank = evdata->data;
+		if (*blank == FB_BLANK_POWERDOWN) {
+			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
+			nvt_ts_suspend(&ts->client->dev);
 		}
-
-		return 0;
+	} else if (evdata && evdata->data && event == FB_EVENT_BLANK) {
+		blank = evdata->data;
+		if (*blank == FB_BLANK_UNBLANK) {
+			NVT_LOG("event=%lu, *blank=%d\n", event, *blank);
+			nvt_ts_resume(&ts->client->dev);
+		}
 	}
+
+	return 0;
+}
 #endif
 
 #elif defined(CONFIG_HAS_EARLYSUSPEND)
