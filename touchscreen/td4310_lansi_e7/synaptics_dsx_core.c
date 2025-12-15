@@ -4191,7 +4191,7 @@ static void synaptics_rmi4_exp_fn_work(struct work_struct *work)
 	mutex_unlock(&rmi4_data->rmi4_exp_init_mutex);
 }
 
-void synaptics_rmi4_new_function_lansi (struct synaptics_rmi4_exp_fn *exp_fn,
+void synaptics_rmi4_new_function(struct synaptics_rmi4_exp_fn *exp_fn,
 		bool insert)
 {
 	struct synaptics_rmi4_exp_fhandler *exp_fhandler;
@@ -4943,7 +4943,7 @@ static int __init synaptics_rmi4_init(void)
 {
 	int retval;
 
-	retval = synaptics_rmi4_bus_init_lansi ();
+	retval = synaptics_rmi4_bus_init();
 	if (retval)
 		return retval;
 
@@ -4954,7 +4954,7 @@ static void __exit synaptics_rmi4_exit(void)
 {
 	platform_driver_unregister(&synaptics_rmi4_driver);
 
-	synaptics_rmi4_bus_exit_lansi ();
+	synaptics_rmi4_bus_exit();
 }
 
 late_initcall(synaptics_rmi4_init);
