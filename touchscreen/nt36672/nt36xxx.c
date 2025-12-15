@@ -29,6 +29,7 @@
 
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
+#include <linux/uaccess.h>
 
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
