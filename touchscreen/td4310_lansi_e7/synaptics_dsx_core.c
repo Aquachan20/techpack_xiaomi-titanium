@@ -4534,7 +4534,7 @@ static int synaptics_rmi4_probe (struct platform_device *pdev)
 			queue_delayed_work (rmi4_data->esd_workqueue, &rmi4_data->esd_work, SYNAPTICS_ESD_CHECK_CIRCLE);
 #endif
 
-	return;
+	return retval;
 
 err_sysfs:
 	for (attr_count--; attr_count >= 0; attr_count--) {
