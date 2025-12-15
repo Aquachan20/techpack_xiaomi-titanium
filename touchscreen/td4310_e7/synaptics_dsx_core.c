@@ -67,7 +67,7 @@
 #define USE_DATA_SERVER
 */
 
-#define WAKEUP_GESTURE 1
+#define WAKEUP_GESTURE false
 
 #define NO_0D_WHILE_2D
 #define REPORT_2D_Z
@@ -129,32 +129,6 @@
 #define F12_UDG_DETECT 0x0f
 
 static struct synaptics_rmi4_data *rmi4_data;
-
-bool synaptics_gesture_func_on = true;
-#if WAKEUP_GESTURE
-#define WAKEUP_OFF 4
-#define WAKEUP_ON 5
-
-int synaptics_gesture_switch (struct input_dev *dev, unsigned int type, unsigned int code, int value)
-{
-
-	unsigned int input ;
-	if (type == EV_SYN && code == SYN_CONFIG) {
-		if (value == WAKEUP_OFF) {
-			synaptics_gesture_func_on = false;
-			input = 0;
-		} else if (value == WAKEUP_ON) {
-			synaptics_gesture_func_on  = true;
-			input = 1;
-		}
-	}
-	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture)
-		rmi4_data->enable_wakeup_gesture = input;
-
-	return 0;
-}
-#endif
-
 
 extern int get_tddi_lockdown_data (unsigned char *lockdown_data, unsigned short leng);
 
@@ -929,10 +903,7 @@ static ssize_t synaptics_rmi4_wake_gesture_store (struct device *dev,
 	if (kstrtouint(buf, 10, &input) != 1)
 		return -EINVAL;
 
-	if (synaptics_gesture_func_on)
 		input = input > 0 ? 1 : 0;
-	   else
-		input = 0;
 
 	if (rmi4_data->f11_wakeup_gesture || rmi4_data->f12_wakeup_gesture)
 		rmi4_data->enable_wakeup_gesture = input;
@@ -1137,9 +1108,9 @@ static int synaptics_rmi4_f11_abs_report (struct synaptics_rmi4_data *rmi4_data,
 			input_sync (rmi4_data->input_dev);
 			input_report_key (rmi4_data->input_dev, KEY_WAKEUP, 0);
 			input_sync (rmi4_data->input_dev);
-			/* rmi4_data->suspend = false; */
+			rmi4_data->suspend = false;
 		}
-		synaptics_rmi4_wakeup_gesture (rmi4_data, false);
+		synaptics_rmi4_wakeup_gesture(rmi4_data, false);
 		return 0;
 	}
 
@@ -1321,8 +1292,8 @@ static int synaptics_rmi4_f12_abs_report (struct synaptics_rmi4_data *rmi4_data,
 			input_sync (rmi4_data->input_dev);
 			input_report_key (rmi4_data->input_dev, KEY_WAKEUP, 0);
 			input_sync (rmi4_data->input_dev);
-
-			rmi4_data->suspend = false;
+			/* synaptics_rmi4_wakeup_gesture(rmi4_data, false); */
+			/* rmi4_data->suspend = false; */
 		}
 
 		return 0;
@@ -4483,12 +4454,6 @@ static int synaptics_rmi4_probe (struct platform_device *pdev)
 			create_singlethread_workqueue ("dsx_reset_workqueue");
 	INIT_WORK (&rmi4_data->reset_work, synaptics_rmi4_reset_work);
 	queue_work (rmi4_data->reset_workqueue, &rmi4_data->reset_work);
-#endif
-
-#if WAKEUP_GESTURE
-    input_set_capability (rmi4_data->input_dev, EV_KEY, KEY_WAKEUP);
-
-   rmi4_data->input_dev->event = synaptics_gesture_switch;
 #endif
 
 
