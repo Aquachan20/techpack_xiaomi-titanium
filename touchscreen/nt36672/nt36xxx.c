@@ -264,15 +264,17 @@ int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf, 
 	int32_t ret = -1;
 	int32_t retries = 0;
 
+	memcpy(ts->xbuf, buf, len);
+
 	msgs[0].flags = !I2C_M_RD;
 	msgs[0].addr  = address;
 	msgs[0].len   = 1;
-	msgs[0].buf   = &buf[0];
+	msgs[0].buf   = &ts->xbuf[0];
 
 	msgs[1].flags = I2C_M_RD;
 	msgs[1].addr  = address;
 	msgs[1].len   = len - 1;
-	msgs[1].buf   = &buf[1];
+	msgs[1].buf   = &ts->xbuf[1];
 
 	while (retries < 5) {
 		ret = i2c_transfer(client->adapter, msgs, 2);
@@ -284,6 +286,8 @@ int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf, 
 		NVT_LOG("error, ret=%d\n", ret);
 		ret = -EIO;
 	}
+
+	memcpy(buf, ts->xbuf, len);
 
 	return ret;
 }
@@ -306,10 +310,12 @@ int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf,
 	int32_t ret = -1;
 	int32_t retries = 0;
 
+	memcpy(ts->xbuf, buf, len);
+
 	msg.flags = !I2C_M_RD;
 	msg.addr  = address;
 	msg.len   = len;
-	msg.buf   = buf;
+	msg.buf   = ts->xbuf;
 
 	while (retries < 5) {
 		ret = i2c_transfer(client->adapter, &msg, 1);
@@ -321,6 +327,8 @@ int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf,
 		NVT_LOG("error, ret=%d\n", ret);
 		ret = -EIO;
 	}
+
+	memcpy(buf, ts->xbuf, len);
 
 	return ret;
 }
@@ -1197,6 +1205,15 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 		return -ENOMEM;
 	}
 
+	ts->xbuf = kmalloc(1025, GFP_KERNEL);
+	if (ts == NULL) {
+		TP_LOGE("failed to allocated memory for nvt ts xbuf");
+		TP_LOGP("failed to allocated nvt_ts_xbuf");
+		return -ENOMEM;
+	} else {
+		TP_LOGP("allocated nvt_ts_xbuf ok");
+	}
+
 	ts->client = client;
 	i2c_set_clientdata(client, ts);
 
@@ -1438,6 +1455,7 @@ err_check_functionality_failed:
 	}
 err_gpio_config_failed:
 	i2c_set_clientdata(client, NULL);
+	kfree(ts->xbuf);
 	kfree(ts);
 	return ret;
 }
@@ -1460,6 +1478,7 @@ static int32_t nvt_ts_remove(struct i2c_client *client)
 	free_irq(client->irq, ts);
 	input_unregister_device(ts->input_dev);
 	i2c_set_clientdata(client, NULL);
+	kfree(ts->xbuf);
 	kfree(ts);
 
 	return 0;

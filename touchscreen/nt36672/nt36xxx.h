@@ -134,6 +134,7 @@ struct nvt_ts_data {
 	const struct nvt_ts_mem_map *mmap;
 	uint8_t carrier_system;
 	uint16_t nvt_pid;
+	uint8_t *xbuf;
 };
 
 #if NVT_TOUCH_PROC
