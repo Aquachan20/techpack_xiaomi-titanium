@@ -348,7 +348,7 @@ void nvt_sw_reset_idle(void)
 	buf[1] = 0xA5;
 	CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
 
-	msleep(15);
+	usleep_range(15000, 16000);
 }
 
 void nvt_bootloader_reset(void)
@@ -390,7 +390,7 @@ int32_t nvt_clear_fw_status(void)
 		if (buf[1] == 0x00)
 			break;
 
-		msleep(10);
+		usleep_range(10000, 11000);
 	}
 
 	if (i >= retry) {
@@ -422,7 +422,7 @@ int32_t nvt_check_fw_status(void)
 		if ((buf[1] & 0xF0) == 0xA0)
 			break;
 
-		msleep(10);
+		usleep_range(10000, 11000);
 	}
 
 	if (i >= retry) {
@@ -440,7 +440,7 @@ int32_t nvt_check_fw_reset_state(RST_COMPLETE_STATE check_reset_state)
 	int32_t retry = 0;
 
 	while (1) {
-		msleep(10);
+		usleep_range(10000, 11000);
 
 
 		buf[0] = EVENT_MAP_RESET_COMPLETE;
@@ -1138,7 +1138,7 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 		buf[0] = 0x00;
 		buf[1] = 0x35;
 		CTP_I2C_WRITE(ts->client, I2C_HW_Address, buf, 2);
-		msleep(10);
+		usleep_range(10000, 11000);
 
 		buf[0] = 0xFF;
 		buf[1] = 0x01;
@@ -1184,7 +1184,7 @@ static int8_t nvt_ts_check_chip_ver_trim(void)
 			}
 		}
 
-		msleep(10);
+		usleep_range(10000, 11000);
 	}
 
 out:
@@ -1237,7 +1237,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	}
 
 
-	msleep(10);
+	usleep_range(10000, 11000);
 
 
 	ret = nvt_ts_check_chip_ver_trim();
