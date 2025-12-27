@@ -4419,7 +4419,7 @@ static const struct spi_device_id nvt_spi_id[] = {
 
 #ifdef CONFIG_OF
 static const struct of_device_id nvt_spi_match_table[] = {
-	{ .compatible = "novatek,NVT-ts_vince",},
+	{ .compatible = "novatek,NVT-ts",},
 	{ },
 };
 #endif
