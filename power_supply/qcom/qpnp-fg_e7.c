@@ -4028,7 +4028,7 @@ static void status_change_work(struct work_struct *work)
 
 	if (chip->status == POWER_SUPPLY_STATUS_FULL) {
 		if (capacity >= 99 && chip->hold_soc_while_full
-				&& (chip->health == POWER_SUPPLY_HEALTH_GOOD || chip->health == POWER_SUPPLY_HEALTH_COOL)) {
+				&& chip->health == POWER_SUPPLY_HEALTH_GOOD) {
 			if (fg_debug_mask & FG_STATUS)
 				pr_info("holding soc at 100\n");
 			chip->charge_full = true;
@@ -4483,8 +4483,8 @@ static bool fg_validate_battery_info(struct fg_chip *chip)
 				(FULL_CAPACITY - 2), FULL_SOC_RAW - 2) + 1;
 
 	if (batt_soc == FULL_SOC_RAW)
-		chip->batt_info[BATT_INFO_SOC] = 100;
-
+	chip->batt_info[BATT_INFO_SOC] = 100;
+	
 	if (*chip->batt_range_ocv && chip->batt_max_voltage_uv > 1000)
 		delta_pct =  DIV_ROUND_CLOSEST(abs(batt_volt_mv -
 				chip->batt_info[BATT_INFO_VOLTAGE]) * 100,
